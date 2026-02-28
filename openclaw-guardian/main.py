@@ -199,17 +199,20 @@ class OpenClawGuardian:
         - DependencyChecker: for checking outdated packages
         - UpgradeExecutor: for upgrading packages
         - PRCreator: for creating pull requests
+        - MoltbookPoster: for posting upgrade notifications
         """
         from skills.repo_monitor import get_repo_monitor
         from skills.dependency_checker import get_dependency_checker
         from skills.upgrade_executor import get_upgrade_executor
         from skills.pr_creator import get_pr_creator
+        from skills.moltbook_poster import MoltbookPoster
         
         # Create all skill instances
         self.monitor = get_repo_monitor(self.config, self.logger)
         self.checker = get_dependency_checker(self.config, self.logger)
         self.executor = get_upgrade_executor(self.config, self.logger)
         self.pr_creator = get_pr_creator(self.config, self.logger)
+        self.moltbook_poster = MoltbookPoster(self.config, self.logger)
         
         self.logger.info("All skills initialized")
     
@@ -422,6 +425,10 @@ class OpenClawGuardian:
             upgraded_names = [pkg['name'] for pkg in upgraded]
             self.memory.record_upgrade(branch_name, upgraded_names, pr_url)
             self.memory.update_last_check_time()
+            
+            # Step 6: Post to Moltbook (if configured)
+            repo_url = self.config.get('github', {}).get('repo_url', '')
+            self.moltbook_poster.post_upgrade(repo_url, upgraded, pr_url)
             
             self.logger.info("Cycle complete!")
             self._cleanup_repo(repo_path)

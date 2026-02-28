@@ -574,6 +574,14 @@
                     <label for="checkInterval">Check Interval (seconds)</label>
                     <input type="number" id="checkInterval" value="3600" min="60">
                 </div>
+                <div class="form-group">
+                    <label for="moltbookToken">Moltbook API Token (optional)</label>
+                    <input type="password" id="moltbookToken" placeholder="moltbook_xxxxxxxxxxxx">
+                </div>
+                <div class="form-group">
+                    <label for="moltName">Molt Name (optional)</label>
+                    <input type="text" id="moltName" placeholder="github-upgrades">
+                </div>
                 <div class="btn-row">
                     <button class="btn btn-primary" id="btnSave" onclick="saveConfig()">💾 Save Configuration</button>
                 </div>
@@ -802,6 +810,8 @@
                 document.getElementById('repoUrl').value = url;
                 document.getElementById('checkInterval').value = data.config?.checkInterval || 3600;
                 document.getElementById('githubToken').value = '';  // never prefill
+                document.getElementById('moltbookToken').value = '';  // never prefill
+                document.getElementById('moltName').value = data.config?.moltName || 'github-upgrades';
 
                 updateStats(data.stats || {});
                 updateHistory(data.history || []);
@@ -815,6 +825,8 @@
         async function saveConfig() {
             const url = document.getElementById('repoUrl').value.trim();
             const token = document.getElementById('githubToken').value.trim();
+            const moltbookToken = document.getElementById('moltbookToken').value.trim();
+            const moltName = document.getElementById('moltName').value.trim() || 'github-upgrades';
             const interval = parseInt(document.getElementById('checkInterval').value) || 3600;
 
             if (!url) { addLog('❌ Repository URL is required', 'error'); return; }
@@ -827,7 +839,7 @@
             try {
                 const res = await fetch(`${API}/api/config`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ repoUrl: url, githubToken: token, checkInterval: interval })
+                    body: JSON.stringify({ repoUrl: url, githubToken: token, moltbookToken: moltbookToken, moltName: moltName, checkInterval: interval })
                 });
                 const data = await res.json();
                 if (data.success) {

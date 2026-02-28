@@ -238,9 +238,11 @@ def get_status():
     return jsonify({
         'running': False,
         'config': {
-            'repoUrl':         cfg.get('github', {}).get('repo_url', ''),
-            'tokenConfigured': bool(cfg.get('github', {}).get('token', '')),
-            'checkInterval':   cfg.get('agent', {}).get('check_interval', 3600),
+            'repoUrl':            cfg.get('github', {}).get('repo_url', ''),
+            'tokenConfigured':    bool(cfg.get('github', {}).get('token', '')),
+            'checkInterval':      cfg.get('agent', {}).get('check_interval', 3600),
+            'moltbookConfigured': bool(cfg.get('moltbook', {}).get('api_key', '')),
+            'moltName':          cfg.get('moltbook', {}).get('molt_name', 'github-upgrades'),
         },
         # Return current session counters — zero until a cycle finishes
         'stats': {
@@ -255,10 +257,12 @@ def get_status():
 @app.route('/api/config', methods=['POST'])
 def save_config():
     """Rule 2 & 5: validate, save credentials, always wipe session."""
-    data      = request.json or {}
-    new_url   = (data.get('repoUrl',      '') or '').strip()
-    new_token = (data.get('githubToken',  '') or '').strip()
-    interval  = int(data.get('checkInterval', 3600))
+    data         = request.json or {}
+    new_url      = (data.get('repoUrl',       '') or '').strip()
+    new_token    = (data.get('githubToken',   '') or '').strip()
+    moltbook_token = (data.get('moltbookToken', '') or '').strip()
+    molt_name    = (data.get('moltName',      '') or '').strip() or 'github-upgrades'
+    interval     = int(data.get('checkInterval', 3600))
 
     if not new_url:
         return jsonify({'success': False, 'message': 'Repository URL is required'})
@@ -275,12 +279,15 @@ def save_config():
     cfg.setdefault('github', {})
     cfg.setdefault('agent',  {})
     cfg.setdefault('paths',  {})
+    cfg.setdefault('moltbook', {})
     cfg['github']['repo_url']            = new_url
     cfg['github']['token']               = new_token
     cfg['agent']['check_interval']       = interval
     cfg['agent'].setdefault('branch_prefix', 'auto/dependency-update')
     cfg['paths']['working_directory']    = './repos'
     cfg['paths']['memory_file']          = './memory.json'
+    cfg['moltbook']['api_key']           = moltbook_token
+    cfg['moltbook']['molt_name']         = molt_name
     _write_config(cfg)
     print(f"[config] saved  url={new_url}")
 

@@ -4,6 +4,9 @@ agent:
 github:
   repo_url: ''
   token: ''
+moltbook:
+  api_key: moltbook_sk_D19WkvSsQvpOZxv87xIDgamSkJ69cNMG
+  molt_name: githubguardian
 paths:
   memory_file: ./memory.json
   working_directory: ./repos

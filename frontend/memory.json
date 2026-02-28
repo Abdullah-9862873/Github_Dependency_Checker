@@ -1,9 +1,9 @@
 {
-    "repo_url": "https://github.com/abdullahadm9862873-oss/TestingDependency",
+    "repo_url": "https://github.com/abdullahadm9862873-oss/TestingDependency1",
     "last_checked": null,
     "last_updated": [
         {
-            "branch": "auto/dependency-update-1772222266",
+            "branch": "auto/dependency-update-1772307727",
             "packages": [
                 "@testing-library/jest-dom",
                 "@testing-library/react",
@@ -16,8 +16,8 @@
                 "web-vitals",
                 "tailwindcss"
             ],
-            "timestamp": "2026-02-27T19:57:46.746358+00:00",
-            "pr_url": "https://github.com/abdullahadm9862873-oss/TestingDependency/pull/1"
+            "timestamp": "2026-02-28T19:42:07.934296+00:00",
+            "pr_url": "https://github.com/abdullahadm9862873-oss/TestingDependency1/pull/3"
         }
     ],
     "total_runs": 0,
