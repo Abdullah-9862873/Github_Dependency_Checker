@@ -4,7 +4,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return jsonify({"status": "ok", "message": "OpenClaw Guardian API"})
+    return jsonify({"status": "ok", "message": "OpenClaw Guardian"})
 
 @app.route('/api/status')
 def status():
@@ -14,5 +14,3 @@ def status():
         'stats': {'cycles': 0, 'prs': 0, 'packages': 0},
         'history': []
     })
-
-handler = app
