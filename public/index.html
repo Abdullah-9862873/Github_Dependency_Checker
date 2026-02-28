@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Guardian — Automated Dependency Updater</title>
+    <meta name="description"
+        content="OpenClaw Guardian automatically checks your GitHub repositories for outdated npm packages, upgrades them, and opens pull requests.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0d1a;
+            --surface: rgba(255, 255, 255, 0.04);
+            --border: rgba(255, 255, 255, 0.09);
+            --accent: #00d4ff;
+            --accent2: #7b2cbf;
+            --success: #00c896;
+            --danger: #ff5757;
+            --warning: #ffb347;
+            --text: #e8eaed;
+            --muted: #6b7280;
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse 80% 50% at 20% -10%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 110%, rgba(123, 44, 191, 0.08) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text);
+            padding: 24px 20px 60px;
+        }
+
+        .container {
+            max-width: 1380px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ── */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 22px 28px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 28px;
+            backdrop-filter: blur(12px);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .brand h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand p {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            transition: all 0.4s;
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+        }
+
+        .status-running {
+            background: rgba(0, 200, 150, 0.15);
+            border: 1px solid rgba(0, 200, 150, 0.4);
+            color: var(--success);
+        }
+
+        .status-running .status-dot {
+            background: var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-idle {
+            background: rgba(107, 114, 128, 0.15);
+            border: 1px solid rgba(107, 114, 128, 0.3);
+            color: var(--muted);
+        }
+
+        .status-idle .status-dot {
+            background: var(--muted);
+        }
+
+        /* ── Layout ── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+            margin-bottom: 22px;
+        }
+
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 26px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 22px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* ── Form ── */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 0.83rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"] {
+            width: 100%;
+            padding: 13px 15px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.06);
+        }
+
+        /* ── Buttons ── */
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .btn {
+            padding: 12px 22px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+            transition: all 0.22s;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #00c896, #00a878);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff5757, #cc3030);
+        }
+
+        /* ── Stats ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 18px 10px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.07), rgba(123, 44, 191, 0.07));
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: var(--radius-sm);
+            transition: all 0.4s;
+        }
+
+        .stat-box.updated {
+            animation: flash 0.6s ease;
+        }
+
+        .stat-val {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        .stat-lbl {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        /* ── Progress bar ── */
+        .progress-wrap {
+            padding: 12px 0 16px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 3px;
+            animation: sweep 2s ease-in-out infinite;
+        }
+
+        /* ── Live badge ── */
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: blink 1.1s infinite;
+        }
+
+        /* ── Logs ── */
+        .log-box {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            max-height: 340px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+        }
+
+        .log-line {
+            padding: 5px 10px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            border-left: 3px solid;
+            background: rgba(255, 255, 255, 0.02);
+            line-height: 1.5;
+        }
+
+        .log-time {
+            color: var(--muted);
+            font-size: 0.7rem;
+            margin-right: 8px;
+        }
+
+        .log-info {
+            border-color: var(--accent);
+            color: #cdd9e5;
+        }
+
+        .log-success {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .log-error {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .log-warning {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        /* ── Upgrade History ── */
+        .history-wrap {
+            max-height: 380px;
+            overflow-y: auto;
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 48px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        /* Single history card per cycle */
+        .hist-card {
+            padding: 20px 22px;
+            margin-bottom: 14px;
+            background: linear-gradient(135deg,
+                    rgba(0, 212, 255, 0.04), rgba(123, 44, 191, 0.04));
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            animation: slideIn 0.35s ease;
+        }
+
+        .hist-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .hist-cycle-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hist-meta {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .hist-time {
+            font-size: 0.77rem;
+            color: var(--muted);
+        }
+
+        .hist-count {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--success);
+            background: rgba(0, 200, 150, 0.12);
+            border: 1px solid rgba(0, 200, 150, 0.3);
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        /* Package name tags */
+        .pkg-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .pkg-tag {
+            padding: 5px 13px;
+            border-radius: 20px;
+            background: rgba(0, 212, 255, 0.12);
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 500;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hist-pr-link a {
+            color: var(--accent2);
+            text-decoration: none;
+            font-size: 0.83rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hist-pr-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Animations ── */
+        @keyframes sweep {
+            0% {
+                width: 0%
+            }
+
+            60% {
+                width: 75%
+            }
+
+            100% {
+                width: 100%
+            }
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.3
+            }
+        }
+
+        @keyframes pulse {
+            50% {
+                opacity: 0.5
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        @keyframes flash {
+
+            0%,
+            100% {
+                background: rgba(0, 212, 255, 0.07)
+            }
+
+            50% {
+                background: rgba(0, 212, 255, 0.25)
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- ── Header ── -->
+        <header>
+            <div class="brand">
+                <div class="brand-icon">🤖</div>
+                <div>
+                    <h1>OpenClaw Guardian</h1>
+                    <p>Automated GitHub Dependency Updater</p>
+                </div>
+            </div>
+            <div id="statusPill" class="status-pill status-idle">
+                <span class="status-dot"></span>
+                <span id="statusText">Agent Idle</span>
+            </div>
+        </header>
+
+        <!-- ── Row 1: Config + Control ── -->
+        <div class="grid-2">
+
+            <!-- Configuration -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">⚙️ Configuration</div>
+                </div>
+                <div class="form-group">
+                    <label for="repoUrl">GitHub Repository URL</label>
+                    <input type="text" id="repoUrl" placeholder="https://github.com/username/repo">
+                </div>
+                <div class="form-group">
+                    <label for="githubToken">GitHub Personal Access Token</label>
+                    <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                </div>
+                <div class="form-group">
+                    <label for="checkInterval">Check Interval (seconds)</label>
+                    <input type="number" id="checkInterval" value="3600" min="60">
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="btnSave" onclick="saveConfig()">💾 Save Configuration</button>
+                </div>
+            </div>
+
+            <!-- Agent Control + Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🎮 Agent Control</div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-row">
+                    <div class="stat-box" id="boxCycles">
+                        <div class="stat-val" id="statCycles">0</div>
+                        <div class="stat-lbl">Cycles Run</div>
+                    </div>
+                    <div class="stat-box" id="boxPackages">
+                        <div class="stat-val" id="statPackages">0</div>
+                        <div class="stat-lbl">Packages Upgraded</div>
+                    </div>
+                    <div class="stat-box" id="boxPRs">
+                        <div class="stat-val" id="statPRs">0</div>
+                        <div class="stat-lbl">PRs Created</div>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div id="progressWrap" class="progress-wrap hidden">
+                    <span style="font-size:0.82rem;color:var(--muted);">⏳ Working — please wait…</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="btnRunOnce" onclick="runOnce()">⚡ Run Once</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Row 2: Logs ── -->
+        <div class="card" style="margin-bottom:22px;">
+            <div class="card-header">
+                <div class="card-title">📋 Live Logs</div>
+                <div class="live-badge">
+                    <span class="live-dot"></span> Live
+                </div>
+            </div>
+            <div class="log-box" id="logBox">
+                <div class="log-line log-info">
+                    <span class="log-time">--:--:--</span>
+                    Waiting — enter your repo URL and token, then run.
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Row 3: Upgrade History ── -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📜 Upgrade History</div>
+                <span id="histNote" style="font-size:0.78rem;color:var(--muted);">Cleared on page reload or new
+                    config</span>
+            </div>
+            <div class="history-wrap" id="historyWrap">
+                <div class="history-empty" id="histEmpty">No upgrades this session yet</div>
+            </div>
+        </div>
+
+    </div><!-- /container -->
+
+    <script>
+        /* =============================================================
+           OpenClaw Guardian — Frontend Controller
+           Stats and history live only for this browser session.
+           Everything resets on page reload, Save Configuration, or server restart.
+           ============================================================= */
+
+        const API = '';
+        let agentRunning = false;
+        let evtSrc = null;
+
+        // ── Helpers ──────────────────────────────────────────────────
+
+        function ts() { return new Date().toLocaleTimeString(); }
+
+        function addLog(msg, level = 'info') {
+            if (!msg) return;
+            const box = document.getElementById('logBox');
+            const line = document.createElement('div');
+            line.className = `log-line log-${level}`;
+            line.innerHTML = `<span class="log-time">${ts()}</span> ${msg}`;
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        /** Flash a stat box to highlight it just updated */
+        function flashBox(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('updated');
+            void el.offsetWidth; // force reflow
+            el.classList.add('updated');
+        }
+
+        function showProgress(show) {
+            document.getElementById('progressWrap').classList.toggle('hidden', !show);
+        }
+
+        // ── Stats ─────────────────────────────────────────────────────
+
+        function updateStats(s) {
+            const cycles = s.cycles ?? 0;
+            const packages = s.packages ?? 0;
+            const prs = s.prs ?? 0;
+
+            const prevCycles = parseInt(document.getElementById('statCycles').textContent) || 0;
+            const prevPkgs = parseInt(document.getElementById('statPackages').textContent) || 0;
+            const prevPRs = parseInt(document.getElementById('statPRs').textContent) || 0;
+
+            document.getElementById('statCycles').textContent = cycles;
+            document.getElementById('statPackages').textContent = packages;
+            document.getElementById('statPRs').textContent = prs;
+
+            if (cycles !== prevCycles) flashBox('boxCycles');
+            if (packages !== prevPkgs) flashBox('boxPackages');
+            if (prs !== prevPRs) flashBox('boxPRs');
+        }
+
+        // ── Upgrade History ───────────────────────────────────────────
+
+        function updateHistory(history) {
+            const wrap = document.getElementById('historyWrap');
+            const empty = document.getElementById('histEmpty');
+
+            if (!history || history.length === 0) {
+                empty.style.display = 'block';
+                // Remove any existing cards
+                wrap.querySelectorAll('.hist-card').forEach(el => el.remove());
+                return;
+            }
+            empty.style.display = 'none';
+
+            // Re-render all cards (simple — at most a handful per session)
+            wrap.querySelectorAll('.hist-card').forEach(el => el.remove());
+
+            const sorted = [...history].sort((a, b) =>
+                new Date(b.timestamp) - new Date(a.timestamp));
+
+            sorted.forEach((entry, idx) => {
+                const pkgs = entry.packages || [];
+                const prUrl = entry.pr_url || '';
+                const time = new Date(entry.timestamp).toLocaleTimeString();
+                const cycleN = history.length - idx;  // most recent = highest number
+
+                const card = document.createElement('div');
+                card.className = 'hist-card';
+                card.innerHTML = `
+            <div class="hist-card-header">
+                <div class="hist-cycle-label">🔄 Cycle ${cycleN}</div>
+                <div class="hist-meta">
+                    <span class="hist-time">🕐 ${time}</span>
+                    <span class="hist-count">${pkgs.length} package${pkgs.length !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+            <div class="pkg-tags">
+                ${pkgs.map(p => `<span class="pkg-tag">${p}</span>`).join('')}
+            </div>
+            ${prUrl
+                        ? `<div class="hist-pr-link"><a href="${prUrl}" target="_blank">🔗 View Pull Request</a></div>`
+                        : '<div style="font-size:0.77rem;color:var(--muted);">No PR URL recorded</div>'
+                    }`;
+                wrap.insertBefore(card, wrap.querySelector('.hist-card') || empty);
+            });
+        }
+
+        // ── Full UI reset ─────────────────────────────────────────────
+
+        function resetUI() {
+            updateStats({ cycles: 0, packages: 0, prs: 0 });
+            updateHistory([]);
+            showProgress(false);
+            document.getElementById('logBox').innerHTML =
+                `<div class="log-line log-info"><span class="log-time">${ts()}</span> Ready — enter URL and token, then run.</div>`;
+        }
+
+        // ── SSE ───────────────────────────────────────────────────────
+
+        function connectSSE() {
+            if (evtSrc) evtSrc.close();
+            evtSrc = new EventSource(`${API}/api/events`);
+            evtSrc.onmessage = e => {
+                let ev;
+                try { ev = JSON.parse(e.data); } catch { return; }
+
+                switch (ev.type) {
+                    case 'log': addLog(ev.data.message, ev.data.level); break;
+                    case 'stats': updateStats(ev.data); break;
+                    case 'history': updateHistory(ev.data); break;
+                    case 'no_upgrades':
+                        addLog('✅ All dependencies are already up to date', 'success');
+                        break;
+                    case 'cycle_start':
+                        showProgress(true);
+                        break;
+                    case 'cycle_complete':
+                        showProgress(false);
+                        fetchStatus(); // Refresh stats from server
+                        break;
+                    case 'reset':
+                        // Server wiped everything — clear the UI too
+                        resetUI();
+                        break;
+                }
+            };
+            evtSrc.onerror = () => setTimeout(connectSSE, 3000);
+        }
+
+        // ── API calls ─────────────────────────────────────────────────
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch(`${API}/api/status`);
+                const data = await res.json();
+
+                const url = data.config?.repoUrl || '';
+                document.getElementById('repoUrl').value = url;
+                document.getElementById('checkInterval').value = data.config?.checkInterval || 3600;
+                document.getElementById('githubToken').value = '';  // never prefill
+
+                updateStats(data.stats || {});
+                updateHistory(data.history || []);
+                // setRunning(data.running); // Removed as per instructions
+            } catch {
+                addLog('⚠️ Cannot reach API — make sure api.py is running', 'error');
+            }
+        }
+
+        // Rule 2 & 5: Save Configuration
+        async function saveConfig() {
+            const url = document.getElementById('repoUrl').value.trim();
+            const token = document.getElementById('githubToken').value.trim();
+            const interval = parseInt(document.getElementById('checkInterval').value) || 3600;
+
+            if (!url) { addLog('❌ Repository URL is required', 'error'); return; }
+            if (!token) { addLog('❌ GitHub Token is required', 'error'); return; }
+            if (!url.startsWith('https://github.com/')) {
+                addLog('❌ URL must start with https://github.com/', 'error'); return;
+            }
+
+            document.getElementById('btnSave').disabled = true;
+            try {
+                const res = await fetch(`${API}/api/config`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repoUrl: url, githubToken: token, checkInterval: interval })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Always reset UI on save — server already wiped session
+                    resetUI();
+                    addLog('✅ Configuration saved — ready for a fresh run', 'success');
+                } else {
+                    addLog(`❌ ${data.message || 'Failed to save config'}`, 'error');
+                }
+            } catch (err) {
+                addLog(`❌ Save failed: ${err}`, 'error');
+            }
+            document.getElementById('btnSave').disabled = false;
+        }
+
+        // Rule 3: Run Once
+        async function runOnce() {
+            const url = document.getElementById('repoUrl').value.trim();
+            const token = document.getElementById('githubToken').value.trim();
+            if (!url || !token) {
+                addLog('❌ Fill in URL and Token then click Save Configuration first', 'error'); return;
+            }
+            await saveConfig();          // always save first
+            connectSSE();                // start listening before the heavy work
+            try {
+                const res = await fetch(`${API}/api/run-once`, { method: 'POST' });
+                const data = await res.json();
+                console.log('[DEBUG] Response from server:', data);
+                if (!data.success) {
+                    addLog(`❌ ${data.message}`, 'error');
+                    showProgress(false);
+                } else {
+                    // Update UI with stats from server response
+                    if (data.stats) {
+                        console.log('[DEBUG] Updating stats:', data.stats);
+                        updateStats(data.stats);
+                    }
+                    if (data.history) {
+                        console.log('[DEBUG] Updating history:', data.history);
+                        updateHistory(data.history);
+                    }
+                }
+            } catch (err) {
+                addLog(`❌ ${err}`, 'error');
+                showProgress(false);
+            }
+        }
+
+        // ── Bootstrap ─────────────────────────────────────────────────
+        resetUI();      // start with blank session display
+        connectSSE();   // start SSE stream
+        fetchStatus();  // load config fields (already wiped by server on page load)
+    </script>
+</body>
+
+</html>
