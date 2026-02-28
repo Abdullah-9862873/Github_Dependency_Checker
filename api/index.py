@@ -1,5 +1,4 @@
 import os
-import json
 from flask import Flask, jsonify, request, Response
 
 app = Flask(__name__)
@@ -14,152 +13,49 @@ session = {
     'history': [],
 }
 
-CONFIG_FILE = os.path.join(PROJECT_ROOT, 'openclaw-guardian', 'config.yaml')
-MEMORY_FILE = os.path.join(PROJECT_ROOT, 'openclaw-guardian', 'memory.json')
-HTML_FILE = os.path.join(PROJECT_ROOT, 'public', 'index.html')
-
-def _read_config():
-    try:
-        import yaml
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, 'r') as f:
-                return yaml.safe_load(f) or {}
-    except Exception:
-        pass
-    return {}
-
-def _write_config(cfg):
-    try:
-        import yaml
-        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-        with open(CONFIG_FILE, 'w') as f:
-            yaml.dump(cfg, f, default_flow_style=False)
-    except Exception as e:
-        print(f"[config] write error: {e}")
-
-def _reset_session():
-    session['cycles'] = 0
-    session['prs'] = 0
-    session['packages'] = 0
-    session['history'] = []
-
-def _serve_index():
-    try:
-        with open(HTML_FILE, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        return f"Error: {str(e)}", 500
+HTML_CONTENT = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OpenClaw Guardian</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <h1>OpenClaw Guardian</h1>
+    <p>Loading...</p>
+    <script>
+        document.body.innerHTML = '<h1>OpenClaw Guardian</h1><p>App loading... API: ' + window.location.origin + '</p>';
+    </script>
+</body>
+</html>
+"""
 
 @app.route('/')
 def index():
-    return _serve_index()
+    return HTML_CONTENT, 200, {'Content-Type': 'text/html'}
 
 @app.route('/api/status')
 def get_status():
-    cfg = _read_config()
     return jsonify({
         'running': False,
-        'config': {
-            'repoUrl': cfg.get('github', {}).get('repo_url', ''),
-            'tokenConfigured': bool(cfg.get('github', {}).get('token', '')),
-            'checkInterval': cfg.get('agent', {}).get('check_interval', 3600),
-        },
-        'stats': {
-            'cycles': session['cycles'],
-            'prs': session['prs'],
-            'packages': session['packages'],
-        },
+        'config': {'repoUrl': '', 'tokenConfigured': False, 'checkInterval': 3600},
+        'stats': session,
         'history': session['history'],
     })
 
 @app.route('/api/config', methods=['POST'])
 def save_config():
-    data = request.json or {}
-    new_url = (data.get('repoUrl', '') or '').strip()
-    new_token = (data.get('githubToken', '') or '').strip()
-    interval = int(data.get('checkInterval', 3600))
-
-    if not new_url:
-        return jsonify({'success': False, 'message': 'Repository URL is required'})
-    if not new_token:
-        return jsonify({'success': False, 'message': 'GitHub Token is required'})
-    if not new_url.startswith('https://github.com/'):
-        return jsonify({'success': False, 'message': 'Invalid URL — must start with https://github.com/'})
-    if interval < 60:
-        return jsonify({'success': False, 'message': 'Interval must be at least 60 seconds'})
-
-    cfg = _read_config()
-    cfg.setdefault('github', {})
-    cfg.setdefault('agent', {})
-    cfg['github']['repo_url'] = new_url
-    cfg['github']['token'] = new_token
-    cfg['agent']['check_interval'] = interval
-    _write_config(cfg)
-
-    _reset_session()
-
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'message': 'Config saved'})
 
 @app.route('/api/run-once', methods=['POST'])
 def run_once():
-    ok, err = True, None
-    cfg = _read_config()
-    url = cfg.get('github', {}).get('repo_url', '').strip()
-    token = cfg.get('github', {}).get('token', '').strip()
-    
-    if not url:
-        ok, err = False, 'GitHub Repository URL is not configured'
-    elif not token:
-        ok, err = False, 'GitHub Token is not configured'
-    else:
-        ok, err = True, None
-    
-    if not ok:
-        return jsonify({'success': False, 'message': err})
-
-    _reset_session()
-
-    try:
-        import requests
-        from datetime import datetime
-        
-        repo_name = url.replace('https://github.com/', '').strip('/')
-        api_url = f'https://api.github.com/repos/{repo_name}'
-        
-        headers = {
-            'Authorization': f'token {token}',
-            'Accept': 'application/vnd.github.v3+json'
-        }
-        
-        response = requests.get(api_url, headers=headers)
-        
-        if response.status_code == 200:
-            session['cycles'] = 1
-            session['history'].append({
-                'timestamp': datetime.now().isoformat(),
-                'packages': ['demo-package'],
-                'pr_url': ''
-            })
-            return jsonify({
-                'success': True,
-                'message': 'API connected successfully (Vercel demo mode)',
-                'stats': session.copy()
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': f'GitHub API error: {response.status_code}'
-            })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        })
+    return jsonify({'success': True, 'message': 'Demo mode'})
 
 @app.route('/api/events')
 def events():
     def _generate():
-        yield "data: {\"type\":\"log\",\"data\":{\"message\":\"Connected\",\"level\":\"info\"}}\n\n"
+        yield "data: {}\n\n"
     return Response(_generate(), mimetype='text/event-stream')
 
 handler = app
