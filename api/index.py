@@ -1,12 +1,10 @@
 import os
 import json
-from flask import Flask, jsonify, request, render_template, Response
+from flask import Flask, jsonify, request, Response
 
 app = Flask(__name__)
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.join(PROJECT_ROOT, 'openclaw-guardian', 'config.yaml')
-MEMORY_FILE = os.path.join(PROJECT_ROOT, 'openclaw-guardian', 'memory.json')
 
 session = {
     'cycles': 0,
@@ -14,6 +12,9 @@ session = {
     'packages': 0,
     'history': [],
 }
+
+CONFIG_FILE = os.path.join(PROJECT_ROOT, '..', 'openclaw-guardian', 'config.yaml')
+MEMORY_FILE = os.path.join(PROJECT_ROOT, '..', 'openclaw-guardian', 'memory.json')
 
 def _read_config():
     try:
@@ -28,6 +29,7 @@ def _read_config():
 def _write_config(cfg):
     try:
         import yaml
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
         with open(CONFIG_FILE, 'w') as f:
             yaml.dump(cfg, f, default_flow_style=False)
     except Exception as e:
@@ -39,9 +41,18 @@ def _reset_session():
     session['packages'] = 0
     session['history'] = []
 
+HTML_PATH = os.path.join(PROJECT_ROOT, '..', 'public', 'index.html')
+
+def _serve_index():
+    try:
+        with open(HTML_PATH, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        return f"Error loading index.html: {e}", 500
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return _serve_index()
 
 @app.route('/api/status')
 def get_status():
