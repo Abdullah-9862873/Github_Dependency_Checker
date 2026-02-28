@@ -1,0 +1,9 @@
+agent:
+  branch_prefix: auto/dependency-update
+  check_interval: 3600
+github:
+  repo_url: ''
+  token: ''
+paths:
+  memory_file: ./memory.json
+  working_directory: ./repos
