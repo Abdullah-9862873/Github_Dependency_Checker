@@ -1,0 +1,25 @@
+{
+    "repo_url": "https://github.com/abdullahadm9862873-oss/TestingDependency1",
+    "last_checked": null,
+    "last_updated": [
+        {
+            "branch": "auto/dependency-update-1772216171",
+            "packages": [
+                "@testing-library/jest-dom",
+                "@testing-library/react",
+                "@testing-library/user-event",
+                "react",
+                "react-dom",
+                "react-intersection-observer",
+                "react-router-dom",
+                "react-scripts",
+                "web-vitals",
+                "tailwindcss"
+            ],
+            "timestamp": "2026-02-27T18:16:11.986339+00:00",
+            "pr_url": "https://github.com/abdullahadm9862873-oss/TestingDependency1/pull/13"
+        }
+    ],
+    "total_runs": 0,
+    "successful_upgrades": 1
+}
