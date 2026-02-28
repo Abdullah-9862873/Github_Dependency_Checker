@@ -4,7 +4,8 @@ from flask import Flask, jsonify, request, Response
 
 app = Flask(__name__)
 
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+API_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(API_DIR)
 
 session = {
     'cycles': 0,
@@ -13,8 +14,9 @@ session = {
     'history': [],
 }
 
-CONFIG_FILE = os.path.join(PROJECT_ROOT, '..', 'openclaw-guardian', 'config.yaml')
-MEMORY_FILE = os.path.join(PROJECT_ROOT, '..', 'openclaw-guardian', 'memory.json')
+CONFIG_FILE = os.path.join(PROJECT_ROOT, 'openclaw-guardian', 'config.yaml')
+MEMORY_FILE = os.path.join(PROJECT_ROOT, 'openclaw-guardian', 'memory.json')
+HTML_FILE = os.path.join(PROJECT_ROOT, 'public', 'index.html')
 
 def _read_config():
     try:
@@ -41,14 +43,12 @@ def _reset_session():
     session['packages'] = 0
     session['history'] = []
 
-HTML_PATH = os.path.join(PROJECT_ROOT, '..', 'public', 'index.html')
-
 def _serve_index():
     try:
-        with open(HTML_PATH, 'r', encoding='utf-8') as f:
+        with open(HTML_FILE, 'r', encoding='utf-8') as f:
             return f.read()
     except Exception as e:
-        return f"Error loading index.html: {e}", 500
+        return f"Error: {str(e)}", 500
 
 @app.route('/')
 def index():
