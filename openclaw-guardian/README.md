@@ -523,11 +523,6 @@ To create a token:
 
 **Note:** You do not need to store this token anywhere. Simply enter it through the frontend when you start the agent.
 
----
-
-## License
-
-MIT License
 
 ---
 
