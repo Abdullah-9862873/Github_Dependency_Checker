@@ -6,7 +6,7 @@ app = Flask(__name__)
 def index():
     return jsonify({"status": "ok", "message": "OpenClaw Guardian"})
 
-@app.route('/api/status')
+@app.route('/api/status') 
 def status():
     return jsonify({
         'running': False,
