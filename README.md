@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# 
-=======
 # OpenClaw Guardian - Automated GitHub Dependency Updater
 
 ## Table of Contents
